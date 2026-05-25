@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Focus">
+    <title>Minimal Focus Tracker</title>
+    <style>
+        :root {
+            --bg: #000000;
+            --surface: #111111;
+            --surface-border: #222222;
+            --text: #f5f5f5;
+            --text-muted: #888888;
+            --accent: #ffffff;
+            --success: #32d74b;
+            --danger: #ff453a;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 60px;
+        }
+        h1, h2 { 
+            margin: 0 0 16px 0; 
+            font-size: 20px; 
+            font-weight: 600; 
+            letter-spacing: -0.5px;
+        }
+        .card {
+            background-color: var(--surface);
+            border: 1px solid var(--surface-border);
+            border-radius: 16px;
+            padding: 24px;
+            width: 100%;
+            max-width: 340px;
+            box-sizing: border-box;
+            margin-bottom: 16px;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 16px;
+        }
+        .input-group label {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        input, select {
+            background: var(--bg);
+            border: 1px solid var(--surface-border);
+            color: var(--text);
+            padding: 14px;
+            border-radius: 10px;
+            font-size: 16px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        input:focus, select:focus {
+            border-color: var(--text-muted);
+        }
+        button {
+            background-color: var(--accent);
+            color: var(--bg);
+            border: none;
+            padding: 16px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            width: 100%;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        button:active { opacity: 0.8; }
+        
+        /* Log Styling */
+        #historyLog {
+            list-style: none;
+            padding: 0;
+            width: 100%;
+            max-width: 340px;
+        }
+        .log-entry {
+            background-color: var(--surface);
+            border: 1px solid var(--surface-border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            border-bottom: 1px solid var(--surface-border);
+            padding-bottom: 8px;
+        }
+        .log-metrics {
+            display: flex;
+            justify-content: space-between;
+            font-size: 15px;
+        }
+        .metric-col {
+            display: flex;
+            flex-direction: column;
+        }
+        .metric-label { font-size: 12px; color: var(--text-muted); }
+        .delta-positive { color: var(--success); font-weight: 600; }
+        .delta-negative { color: var(--danger); font-weight: 600; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>Daily Log</h2>
+        
+        <div class="input-group">
+            <label>Screen Time (Minutes)</label>
+            <div style="display: flex; gap: 10px;">
+                <input type="number" id="targetTime" placeholder="Target limit" style="flex: 1;" />
+                <input type="number" id="actualTime" placeholder="Actual used" style="flex: 1;" />
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label>Deep Work (Minutes)</label>
+            <input type="number" id="deepWorkTime" placeholder="Minutes focused" />
+        </div>
+
+        <div class="input-group">
+            <label>Primary Focus</label>
+            <select id="deepWorkCategory">
+                <option value="A-Level Revision">A-Level Revision</option>
+                <option value="Trading / Market Analysis">Trading / Market Analysis</option>
+                <option value="Reading / Other">Reading / Other</option>
+            </select>
+        </div>
+
+        <button onclick="saveLog()">Save to Log</button>
+    </div>
+
+    <ul id="historyLog"></ul>
+
+    <script>
+        let logs = JSON.parse(localStorage.getItem('focusLogs')) || [];
+
+        function updateUI() {
+            const logList = document.getElementById('historyLog');
+            logList.innerHTML = '';
+            
+            logs.slice().reverse().forEach(log => {
+                const delta = log.target - log.actual;
+                const deltaClass = delta >= 0 ? 'delta-positive' : 'delta-negative';
+                const deltaSign = delta >= 0 ? '+' : '';
+                
+                const li = document.createElement('li');
+                li.className = 'log-entry';
+                li.innerHTML = `
+                    <div class="log-header">
+                        <span>${log.date}</span>
+                        <span>${log.category}</span>
+                    </div>
+                    <div class="log-metrics">
+                        <div class="metric-col">
+                            <span class="metric-label">Screen Time</span>
+                            <span>${log.actual}m / ${log.target}m</span>
+                        </div>
+                        <div class="metric-col" style="text-align: center;">
+                            <span class="metric-label">Delta</span>
+                            <span class="${deltaClass}">${deltaSign}${delta}m</span>
+                        </div>
+                        <div class="metric-col" style="text-align: right;">
+                            <span class="metric-label">Deep Work</span>
+                            <span>${log.deepWork}m</span>
+                        </div>
+                    </div>
+                `;
+                logList.appendChild(li);
+            });
+        }
+
+        function saveLog() {
+            const target = document.getElementById('targetTime').value;
+            const actual = document.getElementById('actualTime').value;
+            const deepWork = document.getElementById('deepWorkTime').value;
+            const category = document.getElementById('deepWorkCategory').value;
+            
+            if (!target || !actual || !deepWork) {
+                alert("Please fill in all numerical fields.");
+                return;
+            }
+
+            const today = new Date().toLocaleDateString();
+
+            if (logs.length > 0 && logs[logs.length - 1].date === today) {
+                if(!confirm("You already have an entry for today. Overwrite it?")) {
+                    return;
+                }
+                logs.pop(); // Remove the old entry to overwrite
+            }
+
+            logs.push({ 
+                date: today, 
+                target: parseInt(target), 
+                actual: parseInt(actual),
+                deepWork: parseInt(deepWork),
+                category: category
+            });
+
+            localStorage.setItem('focusLogs', JSON.stringify(logs));
+
+            // Clear inputs
+            document.getElementById('actualTime').value = '';
+            document.getElementById('deepWorkTime').value = '';
+            
+            updateUI();
+        }
+
+        updateUI();
+    </script>
+</body>
+</html>
